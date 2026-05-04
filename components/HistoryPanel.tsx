@@ -1,16 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { Clock, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Clock, ChevronLeft, ChevronRight, Search, Trash2 } from "lucide-react";
 
 export interface HistoryEntry {
   id: string;
   agent: string;
   timestamp: Date;
+  payload: Record<string, string>;
+  response: Record<string, unknown>;
 }
 
 interface HistoryPanelProps {
   history: HistoryEntry[];
+  currentEntryId?: string;
+  onSelect?: (entry: HistoryEntry) => void;
   onClear: () => void;
 }
 
@@ -33,8 +37,29 @@ const agentColors: Record<string, string> = {
   "Weekly Progress Report": "bg-fuchsia-500/20 text-fuchsia-300",
 };
 
-export default function HistoryPanel({ history, onClear }: HistoryPanelProps) {
+export default function HistoryPanel({
+  history,
+  currentEntryId,
+  onSelect,
+  onClear,
+}: HistoryPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filteredHistory = useMemo(
+    () =>
+      history.filter((entry) => {
+        const lowerQuery = search.toLowerCase();
+        return (
+          entry.agent.toLowerCase().includes(lowerQuery) ||
+          timeAgo(entry.timestamp).toLowerCase().includes(lowerQuery) ||
+          JSON.stringify(entry.payload).toLowerCase().includes(lowerQuery)
+        );
+      }),
+    [history, search],
+  );
+
+  const displayedHistory = search.trim() ? filteredHistory : history;
 
   return (
     <aside
@@ -61,16 +86,37 @@ export default function HistoryPanel({ history, onClear }: HistoryPanelProps) {
 
       {!collapsed && (
         <div className="flex-1 overflow-y-auto py-3 px-2">
-          {history.length === 0 ? (
+          <div className="mb-3 px-1">
+            <label className="sr-only">Search history</label>
+            <div className="relative">
+              <Search
+                size={14}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+              />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search history"
+                className="w-full rounded-2xl border border-slate-800 bg-slate-950/90 py-2.5 pl-9 pr-3 text-sm text-slate-100 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+              />
+            </div>
+          </div>
+          {displayedHistory.length === 0 ? (
             <p className="text-slate-600 text-xs text-center mt-6 px-2">
-              No requests yet
+              {search ? "No matching history entries." : "No requests yet"}
             </p>
           ) : (
             <div className="space-y-1.5">
-              {[...history].reverse().map((entry) => (
+              {[...displayedHistory].reverse().map((entry) => (
                 <div
                   key={entry.id}
-                  className="px-3 py-2.5 rounded-xl bg-slate-900/60 border border-slate-800/40 hover:border-slate-700/60 transition-colors"
+                  role="button"
+                  onClick={() => onSelect?.(entry)}
+                  className={`cursor-pointer px-3 py-2.5 rounded-xl border transition-colors ${
+                    entry.id === currentEntryId
+                      ? "bg-indigo-500/10 border-indigo-500/40"
+                      : "bg-slate-900/60 border-slate-800/40 hover:border-slate-700/60"
+                  }`}
                 >
                   <span
                     className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md mb-1.5 ${
@@ -90,7 +136,7 @@ export default function HistoryPanel({ history, onClear }: HistoryPanelProps) {
         </div>
       )}
 
-      {!collapsed && history.length > 0 && (
+      {!collapsed && displayedHistory.length > 0 && (
         <div className="p-3 border-t border-slate-800/40">
           <button
             onClick={onClear}

@@ -1,5 +1,6 @@
 const API_URL = process.env.NEXT_PUBLIC_CAREER_API_URL!;
-export async function callCareerAssistant(payload: unknown) {
+export type CareerAssistantPayload = Record<string, unknown>;
+export async function callCareerAssistant(payload: CareerAssistantPayload) {
   const response = await fetch(API_URL, {
     method: "POST",
     headers: {

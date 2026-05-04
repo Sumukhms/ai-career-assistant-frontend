@@ -7,9 +7,14 @@ import { Loader2, X, Send, AlertCircle, Sparkles } from "lucide-react";
 
 interface DynamicFormProps {
   selectedAgent: string;
-  onSuccess?: () => void;
-  onRequest?: (agent: string) => void;
+  onRequest?: (
+    agent: string,
+    payload: Record<string, string>,
+    response: Record<string, unknown>,
+  ) => void;
   addToast: (toast: { type: "success" | "error"; message: string }) => void;
+  initialPayload?: Record<string, string>;
+  initialResult?: Record<string, unknown> | null;
 }
 
 const formFields: Record<string, string[]> = {
@@ -56,7 +61,10 @@ function SkeletonCard() {
   return (
     <div className="mt-8 space-y-3 animate-pulse">
       {[1, 2, 3].map((i) => (
-        <div key={i} className="bg-slate-800/60 border border-slate-700/40 rounded-2xl p-5">
+        <div
+          key={i}
+          className="bg-slate-800/60 border border-slate-700/40 rounded-2xl p-5"
+        >
           <div className="h-3 w-24 bg-slate-700 rounded mb-4" />
           <div className="space-y-2">
             <div className="h-3 w-full bg-slate-700/60 rounded" />
@@ -72,20 +80,28 @@ export default function DynamicForm({
   selectedAgent,
   onRequest,
   addToast,
+  initialPayload,
+  initialResult,
 }: DynamicFormProps) {
   const fields = formFields[selectedAgent] || [];
-  const [formData, setFormData] = useState<Record<string, string>>({});
+  const [formData, setFormData] = useState<Record<string, string>>(
+    initialPayload || {},
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [result, setResult] = useState<Record<string, unknown> | null>(null);
+  const [result, setResult] = useState<Record<string, unknown> | null>(
+    initialResult || null,
+  );
   const [loading, setLoading] = useState(false);
-  const firstFieldRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  const firstFieldRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(
+    null,
+  );
 
   useEffect(() => {
-    setFormData({});
-    setResult(null);
+    setFormData(initialPayload || {});
+    setResult(initialResult || null);
     setErrors({});
     firstFieldRef.current?.focus();
-  }, [selectedAgent]);
+  }, [selectedAgent, initialPayload, initialResult]);
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -111,14 +127,17 @@ export default function DynamicForm({
     try {
       setLoading(true);
       setResult(null);
-      onRequest?.(selectedAgent);
 
       const payload = { intent: intentMap[selectedAgent], ...formData };
       const response = await callCareerAssistant(payload);
       setResult(response);
+      onRequest?.(selectedAgent, payload, response);
       addToast({ type: "success", message: "Analysis complete!" });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "API request failed. Please try again.";
+      const message =
+        err instanceof Error
+          ? err.message
+          : "API request failed. Please try again.";
       console.error(message);
       addToast({ type: "error", message });
     } finally {
@@ -148,7 +167,9 @@ export default function DynamicForm({
                   <span className="text-rose-500 ml-1">*</span>
                 </label>
                 {isTextarea && (
-                  <span className={`text-xs ${charCount > TEXTAREA_MAX * 0.9 ? "text-amber-500" : "text-slate-400"}`}>
+                  <span
+                    className={`text-xs ${charCount > TEXTAREA_MAX * 0.9 ? "text-amber-500" : "text-slate-400"}`}
+                  >
                     {charCount}/{TEXTAREA_MAX}
                   </span>
                 )}
@@ -160,28 +181,38 @@ export default function DynamicForm({
                   maxLength={TEXTAREA_MAX}
                   className={`w-full border rounded-xl p-3.5 text-slate-900 placeholder:text-slate-400 bg-white text-sm
                     focus:outline-none focus:ring-2 transition-all duration-200 resize-none
-                    ${hasError
-                      ? "border-rose-400 focus:ring-rose-400/30 bg-rose-50/30"
-                      : "border-slate-300 focus:ring-indigo-400/30 focus:border-indigo-400"
+                    ${
+                      hasError
+                        ? "border-rose-400 focus:ring-rose-400/30 bg-rose-50/30"
+                        : "border-slate-300 focus:ring-indigo-400/30 focus:border-indigo-400"
                     }`}
                   placeholder={`Enter ${fieldLabels[field] || field}…`}
                   value={formData[field] || ""}
                   onChange={(e) => handleChange(field, e.target.value)}
-                  ref={idx === 0 ? (firstFieldRef as React.RefObject<HTMLTextAreaElement>) : undefined}
+                  ref={
+                    idx === 0
+                      ? (firstFieldRef as React.RefObject<HTMLTextAreaElement>)
+                      : undefined
+                  }
                 />
               ) : (
                 <input
                   type="text"
                   className={`w-full border rounded-xl p-3.5 text-slate-900 placeholder:text-slate-400 bg-white text-sm
                     focus:outline-none focus:ring-2 transition-all duration-200
-                    ${hasError
-                      ? "border-rose-400 focus:ring-rose-400/30 bg-rose-50/30"
-                      : "border-slate-300 focus:ring-indigo-400/30 focus:border-indigo-400"
+                    ${
+                      hasError
+                        ? "border-rose-400 focus:ring-rose-400/30 bg-rose-50/30"
+                        : "border-slate-300 focus:ring-indigo-400/30 focus:border-indigo-400"
                     }`}
                   placeholder={`Enter ${fieldLabels[field] || field}…`}
                   value={formData[field] || ""}
                   onChange={(e) => handleChange(field, e.target.value)}
-                  ref={idx === 0 ? (firstFieldRef as React.RefObject<HTMLInputElement>) : undefined}
+                  ref={
+                    idx === 0
+                      ? (firstFieldRef as React.RefObject<HTMLInputElement>)
+                      : undefined
+                  }
                 />
               )}
 
@@ -238,7 +269,8 @@ export default function DynamicForm({
             Submit a request to see analysis
           </h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            Choose an assistant and provide the requested details to view tailored insights, resume feedback, and interview prep guidance.
+            Choose an assistant and provide the requested details to view
+            tailored insights, resume feedback, and interview prep guidance.
           </p>
         </div>
       )}
