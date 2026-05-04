@@ -7,6 +7,7 @@ import DynamicForm from "../components/DynamicForm";
 import StatsHeader from "../components/StatsHeader";
 import HistoryPanel, { HistoryEntry } from "../components/HistoryPanel";
 import { ToastContainer, useToasts } from "../components/Toast";
+import { getRemainingRequests } from "../lib/rateLimit";
 
 export default function Home() {
   const [selectedAgent, setSelectedAgent] = useState("Resume Review");
@@ -21,6 +22,7 @@ export default function Home() {
     string,
     unknown
   > | null>(null);
+  const [remainingRequests, setRemainingRequests] = useState(30);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const { toasts, addToast, removeToast } = useToasts();
@@ -70,6 +72,8 @@ export default function Home() {
         // ignore malformed localStorage
       }
     }
+
+    setRemainingRequests(getRemainingRequests());
   }, []);
 
   useEffect(() => {
@@ -112,6 +116,7 @@ export default function Home() {
     setActiveHistoryId(id);
     setInitialPayload(payload);
     setInitialResult(response);
+    setRemainingRequests(getRemainingRequests());
   };
 
   const mostUsedAgent =
@@ -167,6 +172,7 @@ export default function Home() {
           <StatsHeader
             totalRequests={totalRequests}
             mostUsedAgent={mostUsedAgent}
+            remainingRequests={remainingRequests}
           />
 
           {/* Form card */}

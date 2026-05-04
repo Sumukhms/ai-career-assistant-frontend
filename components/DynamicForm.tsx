@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { callCareerAssistant } from "@/lib/api";
 import ResultCard from "./ResultCard";
 import { Loader2, X, Send, AlertCircle, Sparkles } from "lucide-react";
+import { checkRateLimit, recordRequest } from "@/lib/rateLimit";
 
 interface DynamicFormProps {
   selectedAgent: string;
@@ -123,7 +124,15 @@ export default function DynamicForm({
     e.preventDefault();
     if (loading) return;
     if (!validate()) return;
+    const rateLimit = checkRateLimit();
 
+    if (!rateLimit.allowed) {
+      addToast({
+        type: "error",
+        message: rateLimit.reason!,
+      });
+      return;
+    }
     try {
       setLoading(true);
       setResult(null);
@@ -131,6 +140,7 @@ export default function DynamicForm({
       const payload = { intent: intentMap[selectedAgent], ...formData };
       const response = await callCareerAssistant(payload);
       setResult(response);
+      recordRequest();
       onRequest?.(selectedAgent, payload, response);
       addToast({ type: "success", message: "Analysis complete!" });
     } catch (err) {

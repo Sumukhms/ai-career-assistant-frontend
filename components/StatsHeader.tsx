@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Activity, Star, Target, Zap } from "lucide-react";
+import { Activity, Star, Zap } from "lucide-react";
 
 interface StatsHeaderProps {
   totalRequests: number;
   mostUsedAgent: string;
+  remainingRequests?: number;
 }
 
 const statsConfig = [
@@ -25,15 +26,8 @@ const statsConfig = [
     small: true,
   },
   {
-    label: "Avg ATS Score",
-    key: "atsScore",
-    icon: Target,
-    color: "text-emerald-400",
-    bg: "bg-emerald-500/10 border-emerald-500/20",
-  },
-  {
-    label: "Success Rate",
-    key: "successRate",
+    label: "Requests Remaining Today",
+    key: "remainingRequests",
     icon: Zap,
     color: "text-sky-400",
     bg: "bg-sky-500/10 border-sky-500/20",
@@ -70,9 +64,10 @@ function useCountUp(target: number, duration = 800) {
 export default function StatsHeader({
   totalRequests,
   mostUsedAgent,
+  remainingRequests = 30,
 }: StatsHeaderProps) {
   const animatedRequests = useCountUp(totalRequests, 900);
-  const animatedAtsScore = useCountUp(78, 900);
+  const animatedRemaining = useCountUp(remainingRequests, 900);
 
   const stats = useMemo(
     () =>
@@ -85,17 +80,13 @@ export default function StatsHeader({
           return { ...item, value: mostUsedAgent || "—" };
         }
 
-        if (item.key === "atsScore") {
-          return { ...item, value: `${animatedAtsScore}%` };
-        }
-
-        if (item.key === "successRate") {
-          return { ...item, value: "94%" };
+        if (item.key === "remainingRequests") {
+          return { ...item, value: `${animatedRemaining}/30` };
         }
 
         return { ...item, value: "—" };
       }),
-    [animatedRequests, animatedAtsScore, mostUsedAgent],
+    [animatedRequests, animatedRemaining, mostUsedAgent],
   );
 
   return (
